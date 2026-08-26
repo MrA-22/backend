@@ -33,10 +33,8 @@ RUN php artisan key:generate
 # Aktifkan mod_rewrite Apache
 RUN a2enmod rewrite
 
-# PERBAIKAN UTAMA: Timpa total konfigurasi VirtualHost bawaan Apache agar langsung mengarah ke /var/www/html/public
-RUN echo '<VirtualHost *:0> \n\
-</VirtualHost> \n\
-<VirtualHost *:80> \n\
+# Konfigurasi Apache DocumentRoot yang benar dan bersih
+RUN echo '<VirtualHost *:80> \n\
     ServerName localhost \n\
     DocumentRoot /var/www/html/public \n\
     <Directory /var/www/html/public> \n\
