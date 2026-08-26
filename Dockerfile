@@ -49,13 +49,12 @@ RUN echo '<VirtualHost *:80> \n\
     CustomLog ${APACHE_LOG_DIR}/access.log combined \n\
 </VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-# Set permissions menyeluruh termasuk untuk file database SQLite
+# Set permissions menyeluruh secara aman
 RUN chown -R www-data:www-data /var/www/html \
     && find /var/www/html -type f -exec chmod 664 {} \; \
     && find /var/www/html -type d -exec chmod 775 {} \; \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod 664 /var/www/html/database/database.sqlite
-
+    && if [ -f /var/www/html/database/database.sqlite ]; then chmod 664 /var/www/html/database/database.sqlite; fi
 # Bersihkan cache config
 RUN php artisan config:clear && php artisan cache:clear
 
