@@ -16,7 +16,7 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Salin seluruh file proyek (termasuk file database.sqlite yang sudah lengkap isinya)
+# Salin seluruh file proyek
 COPY . .
 
 # Konfigurasi Environment Laravel (jika belum ada .env)
@@ -26,8 +26,11 @@ RUN cp .env.example .env
 RUN sed -i 's/CACHE_STORE=database/CACHE_STORE=file/g' .env || true
 RUN sed -i 's/SESSION_DRIVER=database/SESSION_DRIVER=file/g' .env || true
 
-# Pastikan folder database ada (tidak memakai 'touch' agar database.sqlite lokal Anda tidak tertimpa/reset)
-RUN mkdir -p database
+# 1. Buat folder database dan file sqlite kosong baru secara otomatis
+RUN mkdir -p database && touch database/database.sqlite
+
+# 2. JALANKAN MIGRASI OTOMATIS: Membuat seluruh tabel (absensi, guru, siswa, dll) ke database sqlite
+RUN php artisan migrate --force
 
 # Jalankan composer dump-autoload dan generate key
 RUN composer dump-autoload --optimize
@@ -49,12 +52,13 @@ RUN echo '<VirtualHost *:80> \n\
     CustomLog ${APACHE_LOG_DIR}/access.log combined \n\
 </VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-# Set permissions menyeluruh secara aman
+# Set permissions menyeluruh secara aman untuk web server dan database sqlite
 RUN chown -R www-data:www-data /var/www/html \
     && find /var/www/html -type f -exec chmod 664 {} \; \
     && find /var/www/html -type d -exec chmod 775 {} \; \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache \
-    && if [ -f /var/www/html/database/database.sqlite ]; then chmod 664 /var/www/html/database/database.sqlite; fi
+    && chmod 664 /var/www/html/database/database.sqlite
+
 # Bersihkan cache config
 RUN php artisan config:clear && php artisan cache:clear
 
