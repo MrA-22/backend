@@ -22,7 +22,7 @@ COPY . .
 # Konfigurasi Environment Laravel (jika belum ada .env)
 RUN cp .env.example .env
 
-# PERBAIKAN: Ubah driver cache dan session ke file agar tidak mencari tabel database saat build
+# Ubah driver cache dan session ke file agar tidak mencari tabel database saat build
 RUN sed -i 's/CACHE_STORE=database/CACHE_STORE=file/g' .env || true
 RUN sed -i 's/SESSION_DRIVER=database/SESSION_DRIVER=file/g' .env || true
 
@@ -30,37 +30,31 @@ RUN sed -i 's/SESSION_DRIVER=database/SESSION_DRIVER=file/g' .env || true
 RUN composer dump-autoload --optimize
 RUN php artisan key:generate
 
-# Set permissions untuk storage dan cache
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-
-# Aktifkan mod_rewrite Apache terlebih dahulu
+# Aktifkan mod_rewrite Apache
 RUN a2enmod rewrite
 
-# Konfigurasi Apache DocumentRoot agar mengarah ke /var/www/html/public
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
-RUN sed -ri -e 's!/var/www/html/public!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf || true
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf || true
+# PERBAIKAN UTAMA: Timpa total konfigurasi VirtualHost bawaan Apache agar langsung mengarah ke /var/www/html/public
+RUN echo '<VirtualHost *:0> \n\
+</VirtualHost> \n\
+<VirtualHost *:80> \n\
+    ServerName localhost \n\
+    DocumentRoot /var/www/html/public \n\
+    <Directory /var/www/html/public> \n\
+        Options Indexes FollowSymLinks \n\
+        AllowOverride All \n\
+        Require all granted \n\
+    </Directory> \n\
+    ErrorLog ${APACHE_LOG_DIR}/error.log \n\
+    CustomLog ${APACHE_LOG_DIR}/access.log combined \n\
+</VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-# PERBAIKAN UTAMA: Tambahkan izin AllowOverride All agar file .htaccess Laravel dibaca oleh Apache
-RUN echo '<Directory /var/www/html/public/>\n\
-    Options Indexes FollowSymLinks\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>' >> /etc/apache2/apache2.conf
-
-# Hilangkan warning ServerName Apache
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
-
-# Bersihkan cache config (sekarang aman karena menggunakan driver file)
-RUN php artisan config:clear && php artisan cache:clear
-
-# Set permissions untuk storage, bootstrap/cache, dan seluruh folder public
+# Set permissions menyeluruh agar bisa dibaca dan ditulis oleh www-data
 RUN chown -R www-data:www-data /var/www/html \
     && find /var/www/html -type f -exec chmod 664 {} \; \
-    && find /var/www/html -type d -exec chmod 775 {} \;
+    && find /var/www/html -type d -exec chmod 775 {} \; \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Pastikan folder storage dan cache benar-benar writable
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Bersihkan cache config
+RUN php artisan config:clear && php artisan cache:clear
 
 EXPOSE 80
