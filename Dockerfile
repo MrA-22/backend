@@ -1,6 +1,6 @@
 FROM php:8.2-apache
 
-# Install system dependencies & Composer (perbaiki ekstensi PHP yang dibutuhkan)
+# Install system dependencies & Composer
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
@@ -40,8 +40,5 @@ RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
 
 # Hilangkan warning ServerName Apache
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
-
-# Hapus cache konfigurasi lama dan jalankan migrasi dengan membaca .env
-RUN php artisan config:clear && php artisan migrate --force
 
 EXPOSE 80
