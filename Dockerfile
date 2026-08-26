@@ -16,7 +16,7 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Salin seluruh file proyek
+# Salin seluruh file proyek (termasuk file database.sqlite yang sudah lengkap isinya)
 COPY . .
 
 # Konfigurasi Environment Laravel (jika belum ada .env)
@@ -26,13 +26,8 @@ RUN cp .env.example .env
 RUN sed -i 's/CACHE_STORE=database/CACHE_STORE=file/g' .env || true
 RUN sed -i 's/SESSION_DRIVER=database/SESSION_DRIVER=file/g' .env || true
 
-# 1. Buat file database SQLite
-RUN mkdir -p database && touch database/database.sqlite
-
-# 2. PERBAIKAN UTAMA: Jalankan migrasi database (dan seeder jika ada)
-RUN php artisan migrate --force
-# Jika Anda punya data awal/seeder, hapus tanda '#' di baris bawah ini:
-# RUN php artisan db:seed --force
+# Pastikan folder database ada (tidak memakai 'touch' agar database.sqlite lokal Anda tidak tertimpa/reset)
+RUN mkdir -p database
 
 # Jalankan composer dump-autoload dan generate key
 RUN composer dump-autoload --optimize
@@ -54,7 +49,7 @@ RUN echo '<VirtualHost *:80> \n\
     CustomLog ${APACHE_LOG_DIR}/access.log combined \n\
 </VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-# Set permissions menyeluruh termasuk untuk file database SQLite yang sudah di-migrate
+# Set permissions menyeluruh termasuk untuk file database SQLite
 RUN chown -R www-data:www-data /var/www/html \
     && find /var/www/html -type f -exec chmod 664 {} \; \
     && find /var/www/html -type d -exec chmod 775 {} \; \
