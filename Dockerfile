@@ -12,20 +12,23 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Salin file composer terlebih dahulu untuk caching dependencies
+# Salin file composer terlebih dahulu
 COPY composer.json composer.lock ./
-
-# Jalankan composer install untuk mendownload vendor
 RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Salin seluruh sisa file proyek Laravel
+# Salin seluruh file proyek
 COPY . .
 
-# Jalankan composer dump-autoload untuk memastikan class map terbaca
-RUN composer dump-autoload --optimize
+# Konfigurasi Environment Laravel (jika belum ada .env)
+RUN cp .env.example .env
 
-# Set permissions for Laravel storage
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Jalankan composer dump-autoload dan generate key
+RUN composer dump-autoload --optimize
+RUN php artisan key:generate
+
+# Set permissions untuk storage dan cache agar bisa ditulis oleh Apache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Konfigurasi Apache DocumentRoot
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
