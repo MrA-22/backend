@@ -41,4 +41,7 @@ RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
 # Hilangkan warning ServerName Apache
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
+# Bersihkan cache config agar membaca environment terbaru dari Render
+RUN php artisan config:clear && php artisan cache:clear
+
 EXPOSE 80
