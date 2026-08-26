@@ -22,9 +22,12 @@ COPY . .
 # Konfigurasi Environment Laravel (jika belum ada .env)
 RUN cp .env.example .env
 
-# Ubah driver cache dan session ke file agar tidak mencari tabel database saat build
+# Ubah driver cache dan session ke file
 RUN sed -i 's/CACHE_STORE=database/CACHE_STORE=file/g' .env || true
 RUN sed -i 's/SESSION_DRIVER=database/SESSION_DRIVER=file/g' .env || true
+
+# TAMBAHAN UTAMA: Buat folder database dan file kosong database.sqlite jika menggunakan SQLite
+RUN mkdir -p database && touch database/database.sqlite
 
 # Jalankan composer dump-autoload dan generate key
 RUN composer dump-autoload --optimize
@@ -33,7 +36,7 @@ RUN php artisan key:generate
 # Aktifkan mod_rewrite Apache
 RUN a2enmod rewrite
 
-# Konfigurasi Apache DocumentRoot yang benar dan bersih
+# Konfigurasi VirtualHost Apache
 RUN echo '<VirtualHost *:80> \n\
     ServerName localhost \n\
     DocumentRoot /var/www/html/public \n\
@@ -46,11 +49,12 @@ RUN echo '<VirtualHost *:80> \n\
     CustomLog ${APACHE_LOG_DIR}/access.log combined \n\
 </VirtualHost>' > /etc/apache2/sites-available/000-default.conf
 
-# Set permissions menyeluruh agar bisa dibaca dan ditulis oleh www-data
+# Set permissions menyeluruh termasuk untuk file database SQLite
 RUN chown -R www-data:www-data /var/www/html \
     && find /var/www/html -type f -exec chmod 664 {} \; \
     && find /var/www/html -type d -exec chmod 775 {} \; \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod 664 /var/www/html/database/database.sqlite
 
 # Bersihkan cache config
 RUN php artisan config:clear && php artisan cache:clear
