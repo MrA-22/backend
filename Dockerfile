@@ -41,7 +41,13 @@ RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
 # Hilangkan warning ServerName Apache
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Bersihkan cache config agar membaca environment terbaru dari Render
+# Buat folder database dan file sqlite kosong agar perintah artisan cache tidak error
+RUN mkdir -p /var/www/html/database \
+    && touch /var/www/html/database/database.sqlite \
+    && chown -R www-data:www-data /var/www/html/database \
+    && chmod -R 775 /var/www/html/database
+
+# Bersihkan cache config
 RUN php artisan config:clear && php artisan cache:clear
 
 EXPOSE 80
