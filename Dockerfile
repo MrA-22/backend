@@ -37,10 +37,17 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 # Aktifkan mod_rewrite Apache terlebih dahulu
 RUN a2enmod rewrite
 
-# Konfigurasi Apache DocumentRoot
+# Konfigurasi Apache DocumentRoot agar mengarah ke /var/www/html/public
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
+RUN sed -ri -e 's!/var/www/html/public!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf || true
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf || true
+
+# PERBAIKAN UTAMA: Tambahkan izin AllowOverride All agar file .htaccess Laravel dibaca oleh Apache
+RUN echo '<Directory /var/www/html/public/>\n\
+    Options Indexes FollowSymLinks\n\
+    AllowOverride All\n\
+    Require all granted\n\
+</Directory>' >> /etc/apache2/apache2.conf
 
 # Hilangkan warning ServerName Apache
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
