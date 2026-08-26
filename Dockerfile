@@ -41,7 +41,7 @@ RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
 # Hilangkan warning ServerName Apache
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Jalankan migrasi database otomatis ke Supabase saat build
-RUN php artisan migrate --force
+# Hapus cache konfigurasi lama dan jalankan migrasi dengan membaca .env
+RUN php artisan config:clear && php artisan migrate --force
 
 EXPOSE 80
