@@ -55,4 +55,12 @@ RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 # Bersihkan cache config (sekarang aman karena menggunakan driver file)
 RUN php artisan config:clear && php artisan cache:clear
 
+# Set permissions untuk storage, bootstrap/cache, dan seluruh folder public
+RUN chown -R www-data:www-data /var/www/html \
+    && find /var/www/html -type f -exec chmod 664 {} \; \
+    && find /var/www/html -type d -exec chmod 775 {} \;
+
+# Pastikan folder storage dan cache benar-benar writable
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
 EXPOSE 80
